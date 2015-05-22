@@ -34,7 +34,7 @@ import UI.Utils
 -- | The type of application states.
 -- |
 -- | Our state type is a sum, with one constructor for each subpage.
--- | 
+-- |
 -- | There are four main subpages:
 -- |
 -- | - The main page, which shows a list of languages and tags.
@@ -43,7 +43,7 @@ import UI.Utils
 -- | - A page for creating and editing languages
 -- |
 -- | We also define subpages for errors and the loading message.
-data State 
+data State
   = Home [LangSummary] [TagSummary]
   | ViewLang Lang
   | ViewTag Tag [LangSummary]
@@ -53,7 +53,7 @@ data State
 
 -- | The action type defines the various asynchronous actions which we can
 -- | attach to the buttons, links and inputs in our UI.
--- | 
+-- |
 -- | Many of the actions will load the data required to display a new page,
 -- | and then display that page.
 -- |
@@ -62,12 +62,13 @@ data State
 data Action
   = LoadList
   | LoadLang Key
+  | LikeLang Key
   | LoadTag Tag
   | LoadNewLang
   | LoadEditLang Lang
   | UpdateForm (Lang -> Lang)
   | SaveLang
-  
+
 -- | The initial state is the `Loading` state. We will use a hook to change to the
 -- | home page after our component is mounted.
 initialState :: State
@@ -83,24 +84,24 @@ render ctx st _ _ =
   -- | Render the navbar
   header :: T.Html _
   header = H.div (A.className "navbar navbar-default")
-             [ H.div (A.className "navbar-header") 
-               [ H.a (A.href "#" <> A.className "navbar-brand" <> T.onClick ctx (const LoadList)) 
+             [ H.div (A.className "navbar-header")
+               [ H.a (A.href "#" <> A.className "navbar-brand" <> T.onClick ctx (const LoadList))
                  [ T.text "Programming Languages Database" ] ]
              ]
-      
+
   -- | Render the subpage, based on the data constructor used to construct the page
   -- | state.
   renderPage :: State -> [T.Html _]
   renderPage Loading = [ T.text "Loading..." ]
   renderPage (Error err) = [ T.text err ]
-  renderPage (Home langs tags) = 
+  renderPage (Home langs tags) =
     [ H.h2' [ T.text "Tags" ]
     , renderTags (map (_.tag <<< runTagSummary) tags)
     , H.h2' [ T.text "Languages" ]
-    , renderSummaries langs 
+    , renderSummaries langs
     , editLangBtn "Add Language" emptyLang
     ]
-  renderPage (ViewLang lang@(Lang l)) = 
+  renderPage (ViewLang lang@(Lang l)) =
     [ H.h2' [ T.text l.name ]
     , renderTags l.tags
     , H.p (A.className "lead") [ T.text l.description ]
@@ -108,7 +109,7 @@ render ctx st _ _ =
     , ratingsButton lang
     , editLangBtn "Edit" lang
     ]
-  renderPage (ViewTag tag langs) = 
+  renderPage (ViewTag tag langs) =
     [ H.h2' [ T.text ("Languages Tagged " <> show tag) ]
     , renderSummaries langs
     ]
@@ -121,45 +122,47 @@ render ctx st _ _ =
   renderSummaries :: [LangSummary] -> T.Html _
   renderSummaries = H.ul' <<< map (renderSummary <<< runLangSummary)
     where
-    renderSummary summary = H.li' [ H.a (A.href "#" <> T.onClick ctx (const (LoadLang summary.key))) 
-                                    [ T.text summary.name ] 
+    renderSummary summary = H.li' [ H.a (A.href "#" <> T.onClick ctx (const (LoadLang summary.key)))
+                                    [ T.text summary.name ]
                                   ]
 
   -- | Render a list of tags
   renderTags :: [Tag] -> T.Html _
   renderTags = H.p' <<< concatMap renderTag
     where
-    renderTag tag = [ H.a (A.href "#" <> A.className "label label-default" <> T.onClick ctx (const (LoadTag tag))) 
-                        [ T.text tag ] 
+    renderTag tag = [ H.a (A.href "#" <> A.className "label label-default" <> T.onClick ctx (const (LoadTag tag)))
+                        [ T.text tag ]
                     , T.text " "
-                    ]                   
-          
-  -- | Render a button which links to the 'Edit Language' subpage 
+                    ]
+
+  -- | Render a button which links to the 'Edit Language' subpage
   editLangBtn :: String -> Lang -> T.Html _
-  editLangBtn text lang = 
-    H.p' [ H.small' [ H.a (A.href "#" 
-                           <> T.onClick ctx (const (LoadEditLang lang))) 
-                          [ T.text text ] 
+  editLangBtn text lang =
+    H.p' [ H.small' [ H.a (A.href "#"
+                           <> T.onClick ctx (const (LoadEditLang lang)))
+                          [ T.text text ]
                     ]
          ]
-       
-  -- | Render a ratings button for a language             
+
+  -- | Render a ratings button for a language
   ratingsButton :: Lang -> T.Html _
-  ratingsButton lang = 
-    let likes = toNumber ((runLang lang).rating) in 
-    H.p' [ T.text "Implement the Like button here" ]
-   
-  -- | Render the 'Edit Language' subpage           
+  ratingsButton lang =
+    let likes = toNumber ((runLang lang).rating) in
+    H.p' [ T.text "Implement the Like button here"
+         , H.button' [ T.text "Like" ]
+         ]
+
+  -- | Render the 'Edit Language' subpage
   editLangForm :: Lang -> T.Html _
-  editLangForm (Lang lang) = 
+  editLangForm (Lang lang) =
     H.form (A.className "form-horizontal")
       [ H.div (A.className "form-group")
         [ H.label (A.className "col-sm-2 control-label")
           [ T.text "ID" ]
         , H.div (A.className "col-sm-4")
-          [ H.input (A._type "text" 
+          [ H.input (A._type "text"
                      <> A.className "form-control"
-                     <> A.placeholder "A unique identifier for this language" 
+                     <> A.placeholder "A unique identifier for this language"
                      <> A.value lang.key
                      <> T.onInput ctx (\e -> UpdateForm (Lang <<< _ { key = inputValue e } <<< runLang))) [] ]
         ]
@@ -167,9 +170,9 @@ render ctx st _ _ =
         [ H.label (A.className "col-sm-2 control-label")
           [ T.text "Name" ]
         , H.div (A.className "col-sm-4")
-          [ H.input (A._type "text" 
-                     <> A.className "form-control" 
-                     <> A.placeholder "The name of this programming language" 
+          [ H.input (A._type "text"
+                     <> A.className "form-control"
+                     <> A.placeholder "The name of this programming language"
                      <> A.value lang.name
                      <> T.onInput ctx (\e -> UpdateForm (Lang <<< _ { name = inputValue e } <<< runLang))) [] ]
         ]
@@ -206,14 +209,14 @@ render ctx st _ _ =
       , H.div (A.className "form-group")
         [ H.div (A.className "col-sm-offset-2 col-sm-4")
           [ H.button (A.className "btn btn-primary"
-                      <> T.onClick ctx (const SaveLang)) 
+                      <> T.onClick ctx (const SaveLang))
                      [ T.text "Save" ] ]
         ]
       ]
 
--- | This function takes an action and produces a computation in Thermite's 
+-- | This function takes an action and produces a computation in Thermite's
 -- | `Action` monad.
--- | 
+-- |
 -- | The `Action` monad can read the current state, update the state, and perform
 -- | asynchronous tasks, including AJAX requests.
 performAction :: T.PerformAction _ State _ Action
