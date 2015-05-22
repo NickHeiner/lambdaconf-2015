@@ -148,7 +148,7 @@ render ctx st _ _ =
   ratingsButton :: Lang -> T.Html _
   ratingsButton lang =
     let likes = toNumber ((runLang lang).rating) in
-    H.p' [ T.text "Implement the Like button here"
+    H.p' [ T.text $ "Likes: " <> (show likes)
          , H.button' [ T.text "Like" ]
          ]
 
